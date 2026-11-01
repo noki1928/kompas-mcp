@@ -44,7 +44,7 @@ A passing suite is not proof of indefinite uptime or all native parameter combin
 
 There is no hard cancellation of COM, automatic mutation replay, automatic user-document save or guaranteed transaction rollback. RPC-loss reset is mock-tested; native termination is not intentionally induced while user work might be open. One externally interrupted run remains recorded as incomplete.
 
-Generic access is not a sandbox or certification of every SDK interface. Legacy tools keep protocol `isError=true`; extended errors return structured `success=false`. Clients/tests must check both.
+Generic access is not a sandbox or certification of every SDK interface. All tools report failures as protocol `isError=true` with structured `success=false` JSON; clients/tests may check either.
 
 Checkpoints still use separate SaveAs working copies, without external dependency snapshots. Logs require external rotation. Neutral export fidelity and manufacturing approval are not certified.
 

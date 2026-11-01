@@ -1,16 +1,16 @@
 """Semantic tool catalog, isolated from transport and native implementations."""
 from typing import Any, Literal
 from mcp.server.fastmcp import Image
-from diagnostics import error_info
+from diagnostics import error_info, tool_result
 
 
 def register(mcp,worker):
     def run(method,*args,**kwargs):
         try:
             result=worker.call(method,*args,**kwargs)
-            return {'success':True,**result} if isinstance(result,dict) else {'success':True,'result':result}
+            return tool_result({'success':True,**result} if isinstance(result,dict) else {'success':True,'result':result})
         except Exception as exc:
-            return error_info(exc,method)
+            return tool_result(error_info(exc,method))
 
     @mcp.tool()
     def get_kompas_state() -> dict:
@@ -174,20 +174,30 @@ def register(mcp,worker):
         return run('create_closed_profile',contours,plane,plane_object_id,origin,x_axis,y_axis,name,tolerance)
 
     @mcp.tool()
-    def cut_through_all(sketch_id:str,direction:list[float],both_sides:bool=False,name:str='',expected:dict|None=None,target_body_ids:list[str]|None=None) -> dict:
+    def cut_through_all(sketch_id:str,direction:list[float],both_sides:bool=False,name:str='',expected:dict|None=None,
+                        target_body_ids:list[str]|None=None,cleanup_sketch:bool=False) -> dict:
         """Native etThroughAll cut of ALL top-part bodies, no guessed depth.
         Explicit world normal direction; both_sides cuts both directions.
         Checks volume decrease and optional geometric contract. Does not retry
-        opposite direction. Cleanup of only new feature is verified and reported.
+        opposite direction. Cleanup of only new feature (plus sketch if cleanup_sketch)
+        is verified and reported. Only NEW invalid features fail the operation.
         Optional fresh body IDs select native targets; by default ALL top-part bodies.
         Preserves body count unless expected explicitly requests a different count.
         """
-        return run('cut_through_all',sketch_id,direction,both_sides,name,expected,target_body_ids)
+        return run('cut_through_all',sketch_id,direction,both_sides,name,expected,target_body_ids,cleanup_sketch)
+
+    @mcp.tool()
+    def delete_feature(object_id:str|None=None,name:str='') -> dict:
+        """Delete one 3D feature or sketch of the active part by fresh handle or exact
+        unique tree name, rebuild, and report removed_features (native delete may also
+        remove dependents), volume delta and remaining feature errors. Not undoable.
+        """
+        return run('delete_feature',object_id,name)
 
     @mcp.tool()
     def check_model_contract(expected:dict|None=None) -> dict:
         """Read-only check of body_count, bounds_mm=[minXYZ,maxXYZ], volume_mm3,
-        absolute tolerance(default 1e-6), relative_tolerance(default 1e-8), native
+        absolute tolerance(default 1e-6), relative_tolerance(default 1e-6), native
         feature errors and solidity. Failed checks return actual/expected values.
         """
         return run('check_model_contract',expected)
@@ -324,7 +334,7 @@ def register(mcp,worker):
             result=worker.call('capture_viewport',path,overwrite)
             return Image(data=result,format='png') if isinstance(result,bytes) else result
         except Exception as exc:
-            return error_info(exc,'capture_viewport')
+            return tool_result(error_info(exc,'capture_viewport'))
 
     @mcp.tool()
     def capture_views(views:list[str]=['isometric','front','top','right'],directory:str|None=None) -> dict:

@@ -19,7 +19,8 @@ def validate_contract(expected):
     if 'volume_mm3' in expected:
         expected['volume_mm3']=finite(expected['volume_mm3'])
         if expected['volume_mm3']<0: raise ValueError('volume_mm3 must be >=0')
-    for key,default in (('tolerance',1e-6),('relative_tolerance',1e-8)):
+    # Kernel volume readback noise is ~5e-7 relative on 1e4..1e5 mm3 models, so 1e-8 rejected valid features.
+    for key,default in (('tolerance',1e-6),('relative_tolerance',1e-6)):
         expected[key]=finite(expected.get(key,default))
         if expected[key]<0 or expected[key]>0.01: raise ValueError('Contract tolerances must be 0..0.01')
     return expected
@@ -158,6 +159,41 @@ class SafeModelingMixin:
                 errors.append({'name':entity.name,'type':int(entity.type),'error':code})
         return errors
 
+    def _new_feature_errors(self,baseline):
+        """Errors the operation introduced; pre-existing broken user features must not block new work."""
+        known={(e['name'],e['type'],e['error']) for e in baseline}
+        return [e for e in self._native_feature_errors() if (e['name'],e['type'],e['error']) not in known]
+
+    def _feature_names(self):
+        _,part=self._part3d(); collection=part.EntityCollection(0)
+        return [e.name for e in (collection.GetByIndex(i) for i in range(collection.GetCount())) if int(e.type) not in (6,7,8)]
+
+    def delete_feature(self,object_id=None,name=''):
+        """Delete one 3D feature/sketch by fresh handle or exact unique tree name; report everything removed."""
+        from collections import Counter
+        if (object_id is None)==(not name): raise ValueError('Give object_id OR an exact feature name')
+        d3,part=self._part3d()
+        if object_id is not None:
+            entity=self._entity_handle(object_id)
+        else:
+            collection=part.EntityCollection(0)
+            matches=[e for e in (collection.GetByIndex(i) for i in range(collection.GetCount()))
+                     if int(e.type) not in (6,7,8) and e.name==name]
+            if len(matches)!=1: raise ValueError(f'Exact name must match one feature, found {len(matches)}')
+            entity=matches[0]
+        target=entity.name; names_before=self._feature_names(); before=self._model_metrics()
+        try:
+            if not d3.DeleteObject(entity): raise RuntimeError('DeleteObject failed')
+            if not d3.RebuildDocument(): raise RuntimeError('Rebuild after delete failed')
+        finally:
+            self.registry.invalidate_topology(self._scope())
+        after=self._model_metrics()
+        removed=list((Counter(names_before)-Counter(self._feature_names())).elements())
+        warnings=[] if removed==[target] else ['Native delete also removed dependent features: inspect removed_features']
+        return {'success':True,'deleted':target,'removed_features':removed,'before':before,'after':after,
+                'volume_delta_mm3':after['volume_mm3']-before['volume_mm3'],
+                'feature_errors':self._native_feature_errors(),'warnings':warnings}
+
     def check_model_contract(self,expected=None):
         expected=validate_contract(expected); metrics=self._model_metrics(); failures=check_contract(metrics,expected)
         errors=self._native_feature_errors()
@@ -165,5 +201,5 @@ class SafeModelingMixin:
         return {'success':not failures,'metrics':metrics,'failures':failures,'expected':expected,
                 'warnings':['Metrics and native validity checks are not manufacturing approval']}
 
-    def cut_through_all(self,sketch_id,direction,both_sides=False,name='',expected=None,target_body_ids=None):
-        return self.extrusion3d(sketch_id,1,True,False,name,direction,'auto',expected,True,both_sides,target_body_ids)
+    def cut_through_all(self,sketch_id,direction,both_sides=False,name='',expected=None,target_body_ids=None,cleanup_sketch=False):
+        return self.extrusion3d(sketch_id,1,True,False,name,direction,'auto',expected,True,both_sides,target_body_ids,cleanup_sketch)

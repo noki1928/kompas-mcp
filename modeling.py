@@ -24,6 +24,7 @@ class ModelingMixin:
         expected.setdefault('body_count',1 if operation=='revolve' else before['body_count'])
         d3, _ = self._part3d()
         after=None; failures=[]
+        baseline_errors=self._native_feature_errors()
         try:
             if not entity.Create() or not entity.IsCreated():
                 raise RuntimeError(f'{operation}: native feature creation failed')
@@ -33,7 +34,7 @@ class ModelingMixin:
             delta=after['volume_mm3']-before['volume_mm3']; threshold=max(1e-7,abs(before['volume_mm3'])*1e-9)
             if (volume_change=='increase' and delta<=threshold) or (volume_change=='decrease' and delta>=-threshold):
                 failures.append({'check':'volume_'+volume_change,'delta_mm3':delta})
-            errors=self._native_feature_errors()
+            errors=self._new_feature_errors(baseline_errors)
             if errors: failures.append({'check':'native_document_valid','features':errors})
             if failures: raise RuntimeError('New feature result failed geometric contract')
         except Exception as exc:
@@ -44,7 +45,7 @@ class ModelingMixin:
         return {'success': True, 'feature_id': self._remember3d(entity, 'feature'),
                 'operation': operation, 'name': entity.name, 'document_reference': self._scope(),
                 'rebuild_required': False,'before':before,'after':after,'volume_delta_mm3':delta,
-                'checks_passed':True,'warnings': []}
+                'checks_passed':True,'preexisting_feature_errors':baseline_errors,'warnings': []}
 
     def create_sketch(self, plane='XY', plane_object_id=None, name=''):
         d3, part = self._part3d()

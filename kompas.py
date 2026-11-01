@@ -251,7 +251,7 @@ class ComWorker:
                                     'sketch3d','create_sketch','extrusion3d','revolve','edge_operation',
                                     'set_feature_parameters','rebuild_model','fit_view3d','add_component',
                                     'set_component_placement','create_closed_profile','cut_through_all',
-                                    'create_model_projection','create_model_view'}:
+                                    'create_model_projection','create_model_view','delete_feature'}:
                 raise RuntimeError('Finish managed sketch editing with end_sketch_edit before this operation')
             if self.backend.app7 is not None:
                 try:

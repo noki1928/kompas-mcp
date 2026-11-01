@@ -1,6 +1,6 @@
 # Actual coverage (2026-10-01)
 
-Environment: Windows, Python 3.13, KOMPAS-3D v25 Study, installed official API5/API7 TLBs. MCP publishes **76 tools**. This count is not a claim of complete CAD API coverage. Eight explicit-coordinate/contract convenience tools are documented in `EXPLICIT_GEOMETRY.md`.
+Environment: Windows, Python 3.13, KOMPAS-3D v25 Study, installed official API5/API7 TLBs. MCP publishes **77 tools**. This count is not a claim of complete CAD API coverage. Eight explicit-coordinate/contract convenience tools are documented in `EXPLICIT_GEOMETRY.md`.
 
 ## Live-tested through MCP, Python-script tool disabled
 

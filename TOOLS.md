@@ -1,6 +1,6 @@
 # Tool catalog
 
-76 tools: original registrations in `server.py`, extended registrations in `extended_tools.py`. Tool schemas/docstrings are the authoritative parameter reference exposed through MCP `list_tools`. See [explicit geometry contracts](EXPLICIT_GEOMETRY.md).
+77 tools: original registrations in `server.py`, extended registrations in `extended_tools.py`. Tool schemas/docstrings are the authoritative parameter reference exposed through MCP `list_tools`. See [explicit geometry contracts](EXPLICIT_GEOMETRY.md).
 
 ## Original tools (preserved)
 
@@ -17,7 +17,7 @@ Scripts require `KOMPAS_ALLOW_SCRIPTS=1`; ordinary agent workflows should not ne
 | Lifecycle | `list_documents`, `activate_document`, `close_document`, `save_current_document` |
 | Recovery | `create_checkpoint`, `restore_checkpoint` |
 | Sketches | `create_sketch`, `begin_sketch_edit`, `create_sketch_entities`, `end_sketch_edit`, `get_sketch_frame`, `transform_sketch_points`, `create_closed_profile` |
-| Construction/edit | `revolve`, `edge_operation`, `get_feature_parameters`, `set_feature_parameters`, `rebuild_model` |
+| Construction/edit | `revolve`, `edge_operation`, `get_feature_parameters`, `set_feature_parameters`, `rebuild_model`, `delete_feature` |
 | Inspection | `get_model_tree`, `get_model_properties`, `find_faces`, `find_edges`, `validate_document`, `check_model_contract` |
 | Camera/images | `set_standard_view`, `set_camera`, `fit_view`, `capture_viewport`, `capture_views`, `create_model_projection` |
 | Drawing | `drawing_sheet`, `create_model_view`, `set_drawing_view`, `add_dimension`, `get_document_structure`, `find_drawing_objects`, `project_model_points`, `add_model_dimension` |
@@ -29,7 +29,7 @@ Scripts require `KOMPAS_ALLOW_SCRIPTS=1`; ordinary agent workflows should not ne
 
 - Document selectors: native `document_reference` from state/list. Object selectors: process-local `obj_*` IDs. Checkpoints: process-local `checkpoint_*` keys with saved files usable after restart.
 - All lengths mm, angles degrees. Profiles and drawing annotations are local; view placement is sheet-local; components parent-local. Properties expose area mm², volume mm³, mass g.
-- Extended success results use `success=true`; errors use `success=false` with diagnostics. Check both protocol `isError` and JSON `success` in clients. A successful native invocation can return `result=false` and must be interpreted per API semantics.
+- Extended success results use `success=true`. Every failure of every tool is protocol `isError=true` carrying the same `success=false` JSON in `structuredContent` and text. A successful native invocation can return `result=false` and must be interpreted per API semantics.
 - Protected exports need `overwrite=true` for existing files; current-file save needs `confirm_overwrite=true`; closing unsaved work needs `discard_changes=true`.
 - `capture_viewport` without path returns MCP image content; with path returns file metadata. Native drawing raster supports dpi 72..600 and 1-based sheet selection.
 - `api_batch` and sketch entity batches are non-atomic. Check `executed`/partial results and actual state before retrying.

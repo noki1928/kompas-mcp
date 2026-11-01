@@ -58,13 +58,13 @@ Official selection enums are distinct: feature `chooseType=ksChBodies(3)` select
 }
 ```
 
-`expected` supports `body_count`, `bounds_mm`, `volume_mm3`, absolute `tolerance` (default 1e-6) and `relative_tolerance` (default 1e-8). Unknown keys and invalid tolerances fail before the operation.
+`expected` supports `body_count`, `bounds_mm`, `volume_mm3`, absolute `tolerance` (default 1e-6) and `relative_tolerance` (default 1e-6; kernel volume readback noise is ~5e-7 relative), each capped at 0.01. Unknown keys and invalid tolerances fail before the operation.
 
 Each new extrusion/rotation/edge operation reads before/after body metrics, validates solidity/native feature errors and the contract. Addition/subtraction checks actual volume change; edge operations do not assume a particular volume sign. `check_model_contract` exposes the same read-only checks independently.
 
 For cuts, a direction interval provides an initial necessary test. A freshly validated profile additionally provides a swept bounding-box intersection test, when its native update stamp still matches. This is **not proof of kernel intersection**; actual volume decrease remains the decisive postcheck. A stale/missing profile cache falls back to the direction check.
 
-Rejected geometry returns `success=false`, before/rejected metrics, failed checks and cleanup outcome. Cleanup only deletes the new feature, rebuilds and compares body count, volume and bounds with the pre-operation state. It is not a universal transaction or complete dependency rollback. If cleanup fails, stop and recover explicitly.
+Rejected geometry returns `success=false`, before/rejected metrics, failed checks and cleanup outcome. Cleanup only deletes the new feature, rebuilds and compares body count, volume and bounds with the pre-operation state. It is not a universal transaction or complete dependency rollback. If cleanup fails, stop and recover explicitly. `cleanup_sketch=true` on `extrude`/`cut_extrude`/`cut_through_all` also deletes the profile sketch after a successful feature cleanup. Only feature errors introduced by the operation fail it; errors already present are returned as `preexisting_feature_errors`.
 
 ## Stable drawing orientation
 

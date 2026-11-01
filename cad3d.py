@@ -126,7 +126,8 @@ class Cad3DMixin:
                 "name": sketch.name, "document_reference": int(self.active().Reference)}
 
     def extrusion3d(self, sketch_id, depth, cut=False, reverse=False, name="", direction=None,
-                    result_mode='join',expected=None,through_all=False,both_sides=False,target_body_ids=None):
+                    result_mode='join',expected=None,through_all=False,both_sides=False,target_body_ids=None,
+                    cleanup_sketch=False):
         depth = finite(depth, True)
         from geometry import unit, dot, bbox_overlap
         from safe_modeling import validate_contract, check_contract
@@ -192,6 +193,7 @@ class Cad3DMixin:
             if not any(bbox_overlap(swept,b) for b in targets):
                 raise ValueError('Swept profile bounding box misses all target bodies; no mutation performed')
             precheck='swept_bbox_overlap_only'
+        baseline_errors=self._native_feature_errors()
         entity = part.NewEntity(26 if cut else 25)
         after=None; failures=[]
         try:
@@ -223,14 +225,17 @@ class Cad3DMixin:
             feature=entity.GetFeature()
             if not feature.IsValid() or int(feature.objectError)!=0:
                 failures.append({'check':'native_feature_valid','error':int(feature.objectError)})
-            errors=self._native_feature_errors()
+            errors=self._new_feature_errors(baseline_errors)
             if errors: failures.append({'check':'native_document_valid','features':errors})
             if failures: raise RuntimeError('Operation result failed geometric contract')
         except Exception as exc:
             cleanup=self._cleanup_created(entity,before)
+            if cleanup_sketch and cleanup.get('success'):
+                cleanup['sketch']=self._cleanup_created(sketch)
             return {**error_info(exc,'extrusion3d'),'before':before,'rejected_result':after,
                     'failures':failures,'cleanup':cleanup,'direction':actual_direction,
-                    'warnings':['No opposite-direction retry. Cleanup removes only the newly created feature.']}
+                    'warnings':['No opposite-direction retry. Cleanup removes only the newly created feature'
+                                +(' and its sketch.' if cleanup_sketch else '; the sketch is kept.')]}
         finally:
             self.registry.invalidate_topology(int(self.active().Reference))
         return {'success':True,"feature_id": self._remember3d(entity, "feature"), "name": entity.name,
@@ -240,7 +245,8 @@ class Cad3DMixin:
                 'target_scope':('selected_top_part_bodies' if target_bodies else 'all_top_part_bodies') if cut else result_mode,
                 'target_body_ids':target_body_ids,
                 'intersection_precheck':precheck,
-                'before':before,'after':after,'volume_delta_mm3':delta,'checks_passed':True}
+                'before':before,'after':after,'volume_delta_mm3':delta,'checks_passed':True,
+                'preexisting_feature_errors':baseline_errors}
 
     def model_info(self):
         d3 = self.doc3d()

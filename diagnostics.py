@@ -6,6 +6,16 @@ from pathlib import Path
 import time
 
 
+def tool_result(result):
+    """One failure shape for every tool: success=false becomes protocol isError with the
+    same JSON in text and structuredContent. Other results pass through unchanged."""
+    if not (isinstance(result, dict) and result.get('success') is False):
+        return result
+    from mcp.types import CallToolResult, TextContent
+    return CallToolResult(isError=True, structuredContent=result,
+                          content=[TextContent(type='text', text=json.dumps(result, ensure_ascii=False, default=str))])
+
+
 def error_info(exc, method=None, object_id=None):
     hresult = getattr(exc, 'hresult', None)
     excepinfo = getattr(exc, 'excepinfo', None)
