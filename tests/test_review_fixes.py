@@ -45,6 +45,16 @@ class ToleranceTests(unittest.TestCase):
         self.assertTrue(check_contract(metrics, {'volume_mm3': 25400.0}))
 
 
+class CleanupTests(unittest.TestCase):
+    def test_cleanup_error_survives_missing_kompas(self):
+        # CI has no KOMPAS: the scope lookup in cleanup's finally must not mask the structured error.
+        k = Kompas()
+        k._part3d = Mock(side_effect=RuntimeError('lost native session'))
+        k._scope = Mock(side_effect=OSError('Invalid class string'))
+        result = k._cleanup_created(Mock())
+        self.assertFalse(result['success']); self.assertIn('lost native session', result['message'])
+
+
 class FeatureErrorTests(unittest.TestCase):
     def test_only_new_errors_count(self):
         k = Kompas()

@@ -83,7 +83,10 @@ class SafeModelingMixin:
         except Exception as exc:
             return error_info(exc,'cleanup_new_entity')
         finally:
-            self.registry.invalidate_topology(self._scope())
+            try:
+                self.registry.invalidate_topology(self._scope())
+            except Exception:
+                pass  # lost/absent session: the structured cleanup result above must still reach the caller
 
     def create_closed_profile(self,contours,plane='XY',plane_object_id=None,origin=None,x_axis=None,y_axis=None,name='',tolerance=1e-7):
         loops=closed_profiles(contours,tolerance)
