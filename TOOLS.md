@@ -1,6 +1,6 @@
 # Tool catalog
 
-77 tools: original registrations in `server.py`, extended registrations in `extended_tools.py`. Tool schemas/docstrings are the authoritative parameter reference exposed through MCP `list_tools`. See [explicit geometry contracts](EXPLICIT_GEOMETRY.md).
+85 tools: original registrations in `server.py`, extended registrations in `extended_tools.py`. Tool schemas/docstrings are the authoritative parameter reference exposed through MCP `list_tools`. See [explicit geometry contracts](EXPLICIT_GEOMETRY.md).
 
 ## Original tools (preserved)
 
@@ -24,6 +24,8 @@ Scripts require `KOMPAS_ALLOW_SCRIPTS=1`; ordinary agent workflows should not ne
 | Exports | `export_model`, `export_drawing_image`, `export_drawing_pdf`, `capture_drawing_tiles` |
 | Assembly/selection | `get_assembly_tree`, `add_component`, `set_component_placement`, `selection` |
 | Verified through-cut | `cut_through_all` |
+| Change stages | `change_begin`, `change_status`, `change_end`, `change_abort` |
+| Stored assertions | `assert_register`, `assert_list`, `assert_remove`, `assert_check` |
 
 ## Common contracts
 
@@ -34,6 +36,8 @@ Scripts require `KOMPAS_ALLOW_SCRIPTS=1`; ordinary agent workflows should not ne
 - `capture_viewport` without path returns MCP image content; with path returns file metadata. Native drawing raster supports dpi 72..600 and 1-based sheet selection.
 - `api_batch` and sketch entity batches are non-atomic. Check `executed`/partial results and actual state before retrying.
 - `create_closed_profile` validates full contours and manages editing/cleanup. `extrude` now defaults to one-body join; intentional multi-body output requires `result_mode=auto/new_body`. Constructive failures can return structured `success=false`, including on original extrusion tools. Always check it.
+- Successful part mutations (`extrude`, `cut_extrude`, `cut_through_all`, `revolve`, `edge_operation`, `set_feature_parameters`, `delete_feature`) return `effect`: `verdict` (`ok`, `no_effect`, `broken`, `assertion_failed`), volume delta, body count before/after, bounds change, new feature errors and failing stored assertions. `before`/`after` are compact metrics without the per-body list.
+- A change stage (parts only) pins mutations to its document and refuses closing it. `change_abort` deletes features appended since `change_begin` (newest first), restores parameters edited through `set_feature_parameters`, and verifies the start metrics; it refuses when pre-existing features were deleted, renamed or reordered. It is not KOMPAS Undo (see `STABILITY.md`). `change_end` refuses a `broken`/`assertion_failed` verdict unless `force=true`. Stages and assertions are process-local.
 - `set_component_placement` translations and normalized orthogonal axes are tested, including save/reopen. Camera uses a dedicated user projection instead of changing read-only standard orientations. Detailed tested scope is in `COVERAGE.md`.
 
 ## Generic example

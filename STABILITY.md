@@ -24,6 +24,7 @@ Original scope: repair and verify the existing 68 tools, not add new CAD operati
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -v
 .\.venv\Scripts\python.exe tests/smoke_extended.py
 .\.venv\Scripts\python.exe tests/smoke_stability.py
+.\.venv\Scripts\python.exe tests/smoke_stages.py
 ```
 
 Run live suites sequentially: they share one KOMPAS instance and must not compete for its active document. Unit tests use mocks and can run independently. Currently **56 unit tests pass**.
@@ -59,6 +60,12 @@ During verification two broader runs encountered native application failures (dr
 Drawing lookup now reads only body bounds instead of unrelated mass/inertia calculations, and errors include `cad_stage` to identify failing native phases. A later isolated stability suite completed (`artifacts/stability-20261002-002455-569526/`). Native process-crash risk remains: successful reruns are evidence for exercised paths, not proof of indefinite KOMPAS uptime. CAD mutations are never replayed automatically after a lost session.
 
 Final completed verification on the revised code: stability `20261002-002455-569526`, extended `20261002-002703-925074`, explicit geometry `20261002-002758-715784`. All three have `passed.json`; together **271 calls / all 76 exposed tool names**. The explicit recipe includes rejected detached material, metric-restoring cleanup, targeted/bilateral through-cuts, bracket reconstruction and correct drawing orientation after save/reopen.
+
+## KOMPAS Undo probe and change stages, 2026-11-09
+
+A live probe in a new part document established: every COM sketch/feature creation is its own KOMPAS Undo record, and `IDocumentFrame.ExecuteKompasCommand(ksCMEditUndo=57643)` / `ksCMEditRedo=57644` remove/restore them. `IKompasDocument3D.UndoContainer=True` groups records, but our extrusion contract failed inside the group because metrics did not change until the container closed. Closing the probe document afterwards crashed `kStudy.exe` (0xc0000005 / 0xc000041d in `VCRUNTIME140.dll`), taking unrelated open user documents with it.
+
+Therefore change stages do NOT use Undo: `change_abort` deletes appended features and restores recorded parameter edits, then verifies body count/volume/bounds. Do not run Undo/UndoContainer experiments while user documents are open. Stage regression: `tests/smoke_stages.py` (`artifacts/stages-20261109-225026-520901/`, `passed.json`). The other suites were rerun on this code with `passed.json`: explicit `20261109-225109-152635`, extended `20261109-225231-738790`, stability `20261109-225325-703021`. Unit total: 79.
 
 ## Temporary quarter-cut drawing workflow: not completed
 

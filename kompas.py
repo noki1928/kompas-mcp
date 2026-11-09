@@ -19,6 +19,7 @@ from visualization import VisualizationMixin, staged_output
 from drawing import DrawingMixin
 from assembly import AssemblyMixin
 from safe_modeling import SafeModelingMixin
+from stages import StageMixin
 
 
 def number(value: float, positive: bool = False) -> float:
@@ -50,7 +51,7 @@ class ConnectionLostError(RuntimeError):
         self.excepinfo=getattr(exc,'excepinfo',None)
 
 
-class Kompas(SafeModelingMixin, Cad3DMixin, ApiMixin, DocumentMixin, ModelingMixin, VisualizationMixin, DrawingMixin, AssemblyMixin):
+class Kompas(StageMixin, SafeModelingMixin, Cad3DMixin, ApiMixin, DocumentMixin, ModelingMixin, VisualizationMixin, DrawingMixin, AssemblyMixin):
     def __init__(self):
         self.app7 = None
         self.kompas = None
@@ -71,6 +72,7 @@ class Kompas(SafeModelingMixin, Cad3DMixin, ApiMixin, DocumentMixin, ModelingMix
                 self._model_stamps.clear()
                 self._editing_sketch=None
                 self._profile_bounds={}
+                self._stage=None; self._assertions={}
                 raise ConnectionLostError(exc) from exc
         if self.app7 is None:
             # Obtain API7 from API5, keeping both interfaces in the same instance.
@@ -251,8 +253,10 @@ class ComWorker:
                                     'sketch3d','create_sketch','extrusion3d','revolve','edge_operation',
                                     'set_feature_parameters','rebuild_model','fit_view3d','add_component',
                                     'set_component_placement','create_closed_profile','cut_through_all',
-                                    'create_model_projection','create_model_view','delete_feature'}:
+                                    'create_model_projection','create_model_view','delete_feature',
+                                    'change_begin','change_end','change_abort'}:
                 raise RuntimeError('Finish managed sketch editing with end_sketch_edit before this operation')
+            self.backend._stage_guard(method, arguments)
             if self.backend.app7 is not None:
                 try:
                     doc = self.backend.app7.ActiveDocument
@@ -260,6 +264,10 @@ class ComWorker:
                 except Exception:
                     pass # Logging must not prevent status from recovering a dead COM session.
             result = func(*args, **kwargs)
+            try:
+                self.backend._stage_note(method, result)
+            except Exception:
+                pass  # stage bookkeeping must not turn a completed CAD mutation into a failure/retry
             logged = '<image bytes>' if isinstance(result, bytes) else result
             self.log.record(method, arguments, result=logged, document=document,
                             elapsed=time.monotonic()-start)
@@ -292,6 +300,7 @@ class ComWorker:
                 self.backend._entities3d = {}
                 self.backend.registry.entries.clear()
                 self.backend._editing_sketch=None
+                self.backend._stage=None
                 self.backend = None
                 pythoncom.CoUninitialize()
         with self._lock:

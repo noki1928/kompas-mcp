@@ -203,6 +203,61 @@ def register(mcp,worker):
         return run('check_model_contract',expected)
 
     @mcp.tool()
+    def change_begin(label:str,intent:str='') -> dict:
+        """Open a labelled change stage in the active PART. While open, model mutations are
+        refused in any other document, and the stage document cannot be closed. Each
+        mutation result still carries its own effect. One stage at a time, process-local.
+        """
+        return run('change_begin',label,intent)
+
+    @mcp.tool()
+    def change_status() -> dict:
+        """Report the open stage: added/removed features, parameter edits, operation log,
+        cumulative effect (volume delta, body count, new errors, assertion failures).
+        """
+        return run('change_status')
+
+    @mcp.tool()
+    def change_end(force:bool=False) -> dict:
+        """Close the stage with its cumulative effect. Refused (stage stays open) when the
+        verdict is broken (new feature errors/non-solid) or a stored assertion fails, unless force.
+        """
+        return run('change_end',force)
+
+    @mcp.tool()
+    def change_abort() -> dict:
+        """Revert the open stage: delete every feature appended since change_begin (newest
+        first), restore parameters edited via set_feature_parameters, rebuild, and verify
+        body count/volume/bounds equal the stage start. Refused if pre-existing features were
+        deleted/renamed/reordered. Not KOMPAS Undo; generic API side effects are not reverted.
+        """
+        return run('change_abort')
+
+    @mcp.tool()
+    def assert_register(name:str,kind:Literal['contract','bounds_within','volume_range'],spec:dict) -> dict:
+        """Store a named requirement for the active 3D document, re-checked in every mutation
+        effect and at change_end. contract: body_count/bounds_mm/volume_mm3/tolerances;
+        bounds_within: bounds_mm=[minXYZ,maxXYZ] the model must stay inside (tolerance);
+        volume_range: min_mm3/max_mm3. Same name replaces. Reports whether it holds now.
+        """
+        return run('assert_register',name,kind,spec)
+
+    @mcp.tool()
+    def assert_list() -> dict:
+        """List stored assertions of the active document."""
+        return run('assert_list')
+
+    @mcp.tool()
+    def assert_remove(name:str) -> dict:
+        """Remove one stored assertion of the active document by name."""
+        return run('assert_remove',name)
+
+    @mcp.tool()
+    def assert_check() -> dict:
+        """Evaluate all stored assertions and native feature errors of the active document now."""
+        return run('assert_check')
+
+    @mcp.tool()
     def begin_sketch_edit(sketch_id:str) -> dict:
         """Begin managed sketch editing, return API5 edit_context handle for generic
         geometry/constraints. Only one managed edit at a time; end before features.

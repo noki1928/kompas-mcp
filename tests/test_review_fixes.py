@@ -79,7 +79,8 @@ class FeatureErrorTests(unittest.TestCase):
         d3 = Mock(); d3.DeleteObject.return_value = True; d3.RebuildDocument.return_value = True
         k._part3d = Mock(return_value=(d3, part_with(sketch, cut)))
         k._feature_names = Mock(side_effect=[['Эскиз:1', 'Вырез:1'], []])
-        k._model_metrics = Mock(side_effect=[{'volume_mm3': 90.0}, {'volume_mm3': 100.0}])
+        metrics = lambda v: {'body_count': 1, 'all_solid': True, 'bounds_mm': [0, 0, 0, 1, 1, 1], 'volume_mm3': v, 'bodies': []}
+        k._model_metrics = Mock(side_effect=[metrics(90.0), metrics(100.0)])
         k._native_feature_errors = Mock(return_value=[])
         k._scope = Mock(return_value=1); k.registry = Mock()
         r = k.delete_feature(name='Эскиз:1')

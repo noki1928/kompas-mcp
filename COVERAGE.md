@@ -1,6 +1,6 @@
 # Actual coverage (2026-10-01)
 
-Environment: Windows, Python 3.13, KOMPAS-3D v25 Study, installed official API5/API7 TLBs. MCP publishes **77 tools**. This count is not a claim of complete CAD API coverage. Eight explicit-coordinate/contract convenience tools are documented in `EXPLICIT_GEOMETRY.md`.
+Environment: Windows, Python 3.13, KOMPAS-3D v25 Study, installed official API5/API7 TLBs. MCP publishes **85 tools**. This count is not a claim of complete CAD API coverage. Eight explicit-coordinate/contract convenience tools are documented in `EXPLICIT_GEOMETRY.md`.
 
 ## Live-tested through MCP, Python-script tool disabled
 
@@ -26,6 +26,7 @@ Combined: **271 MCP calls, all 76 published tool names exercised**, including in
 | Drawing | A4 portrait/stamp, three model-source views, true 50 mm linear dimension, typed geometry coordinates and nominal-value reading |
 | Drawing export | Native 300 dpi PNG, native PDF with `%PDF-` signature, 150 dpi sheet tiles |
 | Assembly | Two linked components, translation with origin readback, recursive tree, rebuild, PNG, A3D save |
+| Stages/assertions (`smoke_stages.py`, 2026-11-09) | `effect` on extrude/cut/parameter edit/delete; abort removing a cut and restoring an edited depth to the start volume; document pinning and close refusal; `assertion_failed` blocking `change_end` until forced; assert register/list/check/remove |
 
 Earlier 16 unit tests and original live 2D/3D tests established primitive validation, rollback behavior, origin planes and extrusion/cut direction conventions. Additional unit tests cover registry, policy and output guards.
 
@@ -47,7 +48,7 @@ Lofts, sweeps, shells, drafts, booleans, patterns, complex surfaces, imported ge
 - Model views remain linked to saved source paths. Lookup preserves existing source documents and closes only temporary documents it opened; the stability suite checks document-count preservation. View types should be read back: KOMPAS may return type 2 despite creation with standard-view enum 3.
 - Coordinate dimensions are real CAD dimensions but not bound to model edges. Test drawing is an integration fixture, not a complete production drawing.
 - API7 `UpdatePlacement` can return false despite matching placement readback. Tools report a warning; origin and requested axes are verified explicitly. Component rotation is tested with SAFEARRAY matrix initialization and persistence through save/reopen.
-- Checkpoints are copied files, not transactions or dependency snapshots. No automatic Undo or guaranteed rollback.
+- Checkpoints are copied files, not transactions or dependency snapshots. Change stages roll back by deleting appended features and restoring recorded parameter edits; deletions of pre-existing features, assembly placements and generic API side effects are not reverted. KOMPAS Undo is not used.
 - PDF print scale and neutral-export geometric fidelity have not been independently certified. Only output existence/signature and drawing raster appearance were checked.
 - PrintWindow depends on visible/restored windows and renderer behavior. Cropped parent-window fallback is used when child capture fails.
 - Output files are protected by default, but generic dispatch is not a sandbox. Do not expose the server to untrusted clients.

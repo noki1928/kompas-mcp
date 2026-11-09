@@ -42,9 +42,11 @@ class ModelingMixin:
                     'cleanup':self._cleanup_created(entity,before)}
         finally:
             self.registry.invalidate_topology(self._scope())
+        from stages import compact_metrics
         return {'success': True, 'feature_id': self._remember3d(entity, 'feature'),
                 'operation': operation, 'name': entity.name, 'document_reference': self._scope(),
-                'rebuild_required': False,'before':before,'after':after,'volume_delta_mm3':delta,
+                'effect':self._effect(before,after),
+                'rebuild_required': False,'before':compact_metrics(before),'after':compact_metrics(after),'volume_delta_mm3':delta,
                 'checks_passed':True,'preexisting_feature_errors':baseline_errors,'warnings': []}
 
     def create_sketch(self, plane='XY', plane_object_id=None, name=''):
@@ -240,7 +242,7 @@ class ModelingMixin:
                 'parameters':params,'definition':self._encode(definition,self._scope()),
                 'warnings':[] if params else ['Use describe_object and kompas_api_call on definition for this operation']}
 
-    def set_feature_parameters(self, feature_id, parameters):
+    def set_feature_parameters(self, feature_id, parameters, _restoring=False):
         entity = self._entity_handle(feature_id)
         typ = int(entity.type)
         definition = entity.GetDefinition()
@@ -258,6 +260,9 @@ class ModelingMixin:
         for key in ('reverse','tangent'):
             if key in parameters and not isinstance(parameters[key],bool):
                 raise ValueError(f'{key} must be a boolean')
+        before=self._model_metrics(); baseline=self._native_feature_errors()
+        if not _restoring:
+            self._stage_remember_parameters(feature_id,entity)
         try:
             if typ in (24,25,26):
                 direction = int(old['direction_type'])
@@ -294,7 +299,9 @@ class ModelingMixin:
         except Exception as exc:
             return {**error_info(exc,'set_feature_parameters',feature_id),
                     'previous_parameters':old,'warnings':['Change may be partial; restore checkpoint or reapply previous parameters']}
-        return self.get_feature_parameters(feature_id)
+        after=self._model_metrics()
+        return {**self.get_feature_parameters(feature_id),
+                'effect':self._effect(before,after,self._new_feature_errors(baseline))}
 
     def rebuild_model(self):
         d3,_ = self._part3d()

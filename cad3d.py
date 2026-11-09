@@ -238,14 +238,16 @@ class Cad3DMixin:
                                 +(' and its sketch.' if cleanup_sketch else '; the sketch is kept.')]}
         finally:
             self.registry.invalidate_topology(int(self.active().Reference))
+        from stages import compact_metrics
         return {'success':True,"feature_id": self._remember3d(entity, "feature"), "name": entity.name,
+                'effect':self._effect(before,after),
                 "operation": "cut" if cut else "extrude", "depth": depth,
                 "reverse": reverse, "solid": True,'direction':actual_direction,
                 'through_all':through_all,'both_sides':both_sides,
                 'target_scope':('selected_top_part_bodies' if target_bodies else 'all_top_part_bodies') if cut else result_mode,
                 'target_body_ids':target_body_ids,
                 'intersection_precheck':precheck,
-                'before':before,'after':after,'volume_delta_mm3':delta,'checks_passed':True,
+                'before':compact_metrics(before),'after':compact_metrics(after),'volume_delta_mm3':delta,'checks_passed':True,
                 'preexisting_feature_errors':baseline_errors}
 
     def model_info(self):

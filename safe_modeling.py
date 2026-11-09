@@ -185,6 +185,7 @@ class SafeModelingMixin:
             if len(matches)!=1: raise ValueError(f'Exact name must match one feature, found {len(matches)}')
             entity=matches[0]
         target=entity.name; names_before=self._feature_names(); before=self._model_metrics()
+        baseline=self._native_feature_errors()
         try:
             if not d3.DeleteObject(entity): raise RuntimeError('DeleteObject failed')
             if not d3.RebuildDocument(): raise RuntimeError('Rebuild after delete failed')
@@ -193,9 +194,15 @@ class SafeModelingMixin:
         after=self._model_metrics()
         removed=list((Counter(names_before)-Counter(self._feature_names())).elements())
         warnings=[] if removed==[target] else ['Native delete also removed dependent features: inspect removed_features']
-        return {'success':True,'deleted':target,'removed_features':removed,'before':before,'after':after,
+        errors=self._native_feature_errors()
+        known={(e['name'],e['type'],e['error']) for e in baseline}
+        from stages import compact_metrics
+        return {'success':True,'deleted':target,'removed_features':removed,
+                'effect':self._effect(before,after,[e for e in errors if (e['name'],e['type'],e['error']) not in known],
+                                      geometry_expected=False),
+                'before':compact_metrics(before),'after':compact_metrics(after),
                 'volume_delta_mm3':after['volume_mm3']-before['volume_mm3'],
-                'feature_errors':self._native_feature_errors(),'warnings':warnings}
+                'feature_errors':errors,'warnings':warnings}
 
     def check_model_contract(self,expected=None):
         expected=validate_contract(expected); metrics=self._model_metrics(); failures=check_contract(metrics,expected)

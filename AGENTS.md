@@ -9,6 +9,7 @@
   - `.\.venv\Scripts\python.exe tests/smoke_explicit_geometry.py`
   - `.\.venv\Scripts\python.exe tests/smoke_extended.py`
   - `.\.venv\Scripts\python.exe tests/smoke_stability.py`
+  - `.\.venv\Scripts\python.exe tests/smoke_stages.py`
 - These three suites launch their own MCP processes with scripts disabled, but share the same KOMPAS instance. Do not operate CAD concurrently. Only a final `artifacts/<run>/passed.json` certifies a complete run; partial reports/PASS lines do not.
 - Repo-local `opencode.json` is ignored, contains absolute machine-specific paths, and currently enables unrestricted Python scripts. Do not assume its script policy matches the test subprocesses. Reconnect only `kompas` after backend/tool-schema changes; the running server does not reload edits.
 - Claude Code connects the server from the committed `.mcp.json` (relative `.venv` interpreter, scripts disabled); prefer it over ad-hoc stdio client scripts, which lose handles between runs.
@@ -20,6 +21,7 @@
 - Verify native members/enums against installed TLBs using `sdk_catalog`, `api_constants`, and runtime `describe_object`. `.\.venv\Scripts\python.exe scripts/audit_sdk.py` regenerates ignored `artifacts/sdk/` snapshots (defaults to v25 Study; accepts a Bin-directory argument). Discoverable API members are not evidence of a working CAD workflow.
 - Every failure (original or extended tool, raised or rejected) is protocol `isError=true` with the same JSON (`success=false`, diagnostics, `failures`, `cleanup`) in `structuredContent` and the text block (`diagnostics.tool_result`). Clients still read `success`.
 - Constructive operations fail only on feature errors they introduced; pre-existing broken user features are reported as `preexisting_feature_errors`, not blocking.
+- `stages.py` owns mutation `effect` (verdict/deltas/new errors/assertion failures), change stages and stored assertions. `ComWorker` calls `_stage_guard` before and `_stage_note` after each method; add new model-mutating methods to `STAGE_MUTATIONS`. Stage rollback deletes appended features and restores parameters; never build it on KOMPAS Undo/UndoContainer (a live probe crashed KOMPAS, see `STABILITY.md`).
 
 ## CAD traps and safety
 - Record initial documents/active reference before live work. Create separate test documents and unique output paths; never close/discard unrelated documents. Native KOMPAS crashes have occurred—see `STABILITY.md`; never automatically replay mutations after RPC loss.
